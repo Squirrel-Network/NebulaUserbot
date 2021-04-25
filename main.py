@@ -1,7 +1,10 @@
 import time
+import datetime
 from config import Config
 from pyrogram import Client, filters
 from database.repository.user import UserRepository
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from pyrogram.handlers import MessageHandler
 
 app = Client(
     "my_account",
@@ -9,9 +12,10 @@ app = Client(
     api_hash = Config.API_HASH
 )
 
+current_time = datetime.datetime.utcnow().isoformat()
 
 @app.on_message(filters.command("getall") & filters.group & filters.user(Config.OWNER))
-def get_all_chat_members(client, message):
+def get_all_chat_members(client,message):
     chat = message.chat.id
     for member in app.iter_chat_members(chat):
         if member.user.username is not None:
@@ -21,11 +25,11 @@ def get_all_chat_members(client, message):
             default_count_warn = 0
             if user:
                 print("User {}, {} exists on the database".format(user_username, user_id))
-                data = [(user_username,user_id)]
+                data = [(user_username,current_time,user_id)]
                 UserRepository().update(data)
             else:
                 print("The {}, {} user has been saved to the database".format(user_username, user_id))
-                data = [(user_id,user_username,default_count_warn)]
+                data = [(user_id,user_username,current_time,current_time)]
                 UserRepository().add(data)
             data_mtm = [(user_id, chat, default_count_warn)]
             UserRepository().add_into_mtm(data_mtm)
@@ -38,12 +42,19 @@ def start_command(client, message):
 def check_user_username(client, message):
     chat = message.chat.id
     for member in app.iter_chat_members(chat):
+        print(member)
         if member.user.username is None:
-            msg = "The TEST user was kicked by the automatic system because he doesn't have a username"
+            user_id = member.user.id
+            msg = "The {} user was kicked by the automatic system because he doesn't have a username".format(user_id)
             client.send_message(chat_id=message.chat.id, text=msg)
             app.kick_chat_member(chat, member.user.id, until_date=int(time.time()+30))
         else:
             print("User {} have a username".format(member.user.id))
 
+#scheduler = AsyncIOScheduler()
+#scheduler.add_job(get_all_chat_members, "interval", seconds=60)
 
+app.add_handler(MessageHandler(get_all_chat_members))
+
+#scheduler.start()
 app.run()
