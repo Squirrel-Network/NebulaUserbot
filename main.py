@@ -1,9 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Copyright SquirrelNetwork
+
 import time
 import datetime
 from config import Config
 from pyrogram import Client, filters
+from pyrogram.types.messages_and_media import message
 from database.repository.user import UserRepository
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from database.repository.superban import SuperbanRepository
 from pyrogram.handlers import MessageHandler
 
 app = Client(
@@ -12,12 +18,11 @@ app = Client(
     api_hash = Config.API_HASH
 )
 
-current_time = datetime.datetime.utcnow().isoformat()
-
 @app.on_message(filters.command("getall") & filters.group & filters.user(Config.OWNER))
 def get_all_chat_members(client,message):
     chat = message.chat.id
     for member in app.iter_chat_members(chat):
+        current_time = datetime.datetime.utcnow().isoformat()
         if member.user.username is not None:
             user_id = member.user.id
             user_username = '@'+member.user.username
@@ -42,7 +47,6 @@ def start_command(client, message):
 def check_user_username(client, message):
     chat = message.chat.id
     for member in app.iter_chat_members(chat):
-        print(member)
         if member.user.username is None:
             user_id = member.user.id
             msg = "The {} user was kicked by the automatic system because he doesn't have a username".format(user_id)
@@ -51,10 +55,17 @@ def check_user_username(client, message):
         else:
             print("User {} have a username".format(member.user.id))
 
-#scheduler = AsyncIOScheduler()
-#scheduler.add_job(get_all_chat_members, "interval", seconds=60)
+@app.on_message(filters.command("checksuperban") & filters.group & filters.user(Config.OWNER))
+def check_superban(client, message):
+    chat = message.chat.id
+    for member in app.iter_chat_members(chat):
+        user_id = member.user.id
+        row = SuperbanRepository().getById(user_id)
+        if row:
+            msg = "User {} was kicked out of chat because he is blacklisted\nMore information on https://squirrel-network.online/knowhere/".format(user_id)
+            client.send_message(chat_id=message.chat.id, text=msg)
+            app.kick_chat_member(chat, member.user.id)
+
 
 app.add_handler(MessageHandler(get_all_chat_members))
-
-#scheduler.start()
 app.run()
