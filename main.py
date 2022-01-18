@@ -3,6 +3,7 @@
 
 # Copyright SquirrelNetwork
 
+import re
 import time
 import datetime
 from config import Config
@@ -66,6 +67,24 @@ def check_superban(client, message):
             client.send_message(chat_id=message.chat.id, text=msg)
             app.kick_chat_member(chat, member.user.id)
 
+@app.on_message(filters.chat("cas_feed"))
+def from_cas(client, message):
+    a_string = message.text
+    numeric_filter = filter(str.isdigit, a_string)
+    user_id = "".join(numeric_filter)
+    row = SuperbanRepository().getById(int(user_id))
+    if row:
+        print("{} Exists on the database".format(user_id))
+    else:
+        motivation_text = "CASBAN CHANNEL IMPORT"
+        id_operator = 1065189838
+        user_date = datetime.datetime.utcnow().isoformat()
+        data = [(int(user_id),motivation_text,user_date,id_operator)]
+        SuperbanRepository().add(data)
+        print("Correct Insert {} into Database".format(user_id))
+
+
 
 app.add_handler(MessageHandler(get_all_chat_members))
+app.add_handler(MessageHandler(from_cas))
 app.run()
