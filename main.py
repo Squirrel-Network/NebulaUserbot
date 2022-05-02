@@ -78,8 +78,11 @@ def from_cas(client, message):
     else:
         motivation_text = "CASBAN CHANNEL IMPORT"
         id_operator = 1065189838
+        user_first_name = "Unknown"
+        nickname_operator = "@BluLupo"
+        first_name_operator = "BlueWolf"
         user_date = datetime.datetime.utcnow().isoformat()
-        data = [(int(user_id),motivation_text,user_date,id_operator)]
+        data = [(int(user_id),user_first_name,motivation_text,user_date,id_operator,nickname_operator,first_name_operator)]
         SuperbanRepository().add(data)
         print("Correct Insert {} into Database".format(user_id))
 
